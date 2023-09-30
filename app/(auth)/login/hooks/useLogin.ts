@@ -1,7 +1,6 @@
-import { redirect } from "next/navigation";
+import { useRouter } from 'next/router';  
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useRouter } from 'next/router';
 
 import { useSupabase } from "@/lib/context/SupabaseProvider";
 import { useToast } from "@/lib/hooks";
@@ -20,50 +19,44 @@ export const useLogin = () => {
   const { t } = useTranslation(["login"]);
 
   const router = useRouter();
-  const slackId = router.query.teamId;
+  const slackId = router.query.teamId as string | undefined; // Assuming teamId is a string. Adjust as needed.
 
   const handleLogin = async () => {
     setIsPending(true);
     const { error, data } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
+      email,
+      password,
     });
     if (error) {
       console.log(error.message)
       if (error.message.includes("Failed")) {
         publish({
           variant: "danger",
-          text: t("Failedtofetch",{ ns: 'login' })
+          text: t("Failedtofetch", { ns: 'login' })
         });
       } else if (error.message.includes("Invalid")) {
         publish({
           variant: "danger",
-          text: t("Invalidlogincredentials",{ ns: 'login' })
+          text: t("Invalidlogincredentials", { ns: 'login' })
         });
       } else {
         publish({
           variant: "danger",
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call
-          text: error.message
+          text: error.message // seems safe since we're just showing the error message
         });
       }
-    } else {
+    } else if (data) {
       publish({
         variant: "success",
-        text: t("loginSuccess",{ ns: 'login' })
+        text: t("loginSuccess", { ns: 'login' })
       });
-      const accessToken = data?.session?.access_token;
+      const accessToken = data.session?.access_token;
       if (slackId && accessToken) {
-        const { error: insertError } = await supabase
+        void supabase
           .from('slack_tokens')
           .insert([
-            { slackId: slackId, access_token: accessToken },
+            { slackId, access_token: accessToken },
           ]);
-  
-        if (insertError) {
-          console.error('Error storing slackId and access_token:', insertError);
-          // Handle the insert error appropriately
-        }
       }
     }
     
@@ -71,11 +64,11 @@ export const useLogin = () => {
   };
 
   useEffect(() => {
-    if (session?.user !== undefined) {
+    if (session && session.user) {
       void track("SIGNED_IN");
   
       const previousPage = sessionStorage.getItem("previous-page");
-      if (previousPage === null) {
+      if (!previousPage) {
         router.push("/upload");
       } else {
         sessionStorage.removeItem("previous-page");
