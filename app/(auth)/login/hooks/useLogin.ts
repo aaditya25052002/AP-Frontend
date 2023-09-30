@@ -16,16 +16,15 @@ export const useLogin = () => {
   const { supabase, session } = useSupabase();
 
   const { track } = useEventTracking();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { t } = useTranslation(["login"]);
 
+  const { t } = useTranslation(["login"]);
 
   const router = useRouter();
   const slackId = router.query.teamId;
 
   const handleLogin = async () => {
     setIsPending(true);
-    const { error, session } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -53,14 +52,14 @@ export const useLogin = () => {
         variant: "success",
         text: t("loginSuccess",{ ns: 'login' })
       });
-
-      if (slackId) {
+      const accessToken = data?.session?.access_token;
+      if (slackId && accessToken) {
         const { error: insertError } = await supabase
           .from('slack_tokens')
           .insert([
-            { slackId: slackId, access_token: session.access_token },
+            { slackId: slackId, access_token: accessToken },
           ]);
-
+  
         if (insertError) {
           console.error('Error storing slackId and access_token:', insertError);
           // Handle the insert error appropriately
