@@ -1,4 +1,4 @@
-import { useRouter } from 'next/router';  
+import { useSearchParams , useRouter } from 'next/navigation';  
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -22,9 +22,13 @@ export const useLogin = (): {
   const { track } = useEventTracking();
   const { t } = useTranslation(["login"]);
   const router = useRouter();
+  const [isClient, setIsClient] = useState<boolean>(false);
 
-  const slackId = router.query.teamId?.toString() ?? "";
-
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  const searchParams = useSearchParams();
+  const slackId = searchParams ? searchParams.get('teamId') : null;
   const handleLogin = async () => {
     setIsPending(true);
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
@@ -39,35 +43,44 @@ export const useLogin = (): {
             publish({ variant: "danger", text: error.message });
         }
     } else if (data && data.session) {
-        publish({ variant: "success", text: t("loginSuccess", { ns: 'login' }) });
-        const accessToken = data.session.access_token;
-        if (slackId !== "" && accessToken !== "") {
-            const insertResult = await supabase
-                .from('slack_tokens')
-                .insert([{ slackId, access_token: accessToken }]);
-            
-            if (insertResult.error) {
-                console.error('Error storing slackId and access_token:', insertResult.error);
-            }
-        }
-    }
+      console.log("Login Success:", data);
+      publish({ variant: "success", text: t("loginSuccess", { ns: 'login' }) });
+      const accessToken = data.session.access_token;
+      console.log("Access Token:", accessToken);
+      console.log("Slack ID:", slackId);
+
+      if (slackId !== "" && accessToken !== "") {
+          const insertResult = await supabase
+              .from('slack_tokens')
+              .insert([{ slack_id: slackId, access_token: accessToken }]);
+          
+          if (insertResult.error) {
+              console.error('Error storing slackId and access_token:', insertResult.error);
+          } else {
+              console.log("Token stored successfully:", insertResult.data);
+          }
+      } else {
+          console.warn("Either Slack ID or Access Token is missing. Skipping token storage.");
+      }
+  }
+
 
     setIsPending(false);
   };
 
   useEffect(() => {
-    if (session && session.user) {
-        track("SIGNED_IN").catch(console.error);
-        
-        const previousPage = sessionStorage.getItem("previous-page");
-        if (previousPage === null || previousPage.trim() === "") {
-            void router.push("/upload");
-        } else {
-            sessionStorage.removeItem("previous-page");
-            void router.push(previousPage);
-        }
+    if (session?.user && isClient && router) { // Check for router before accessing its methods
+      track("SIGNED_IN").catch(console.error);
+      
+      const previousPage = sessionStorage.getItem("previous-page");
+      if (!previousPage || previousPage.trim() === "") {
+        router.push("/upload");
+      } else {
+        sessionStorage.removeItem("previous-page");
+        router.push(previousPage);
+      }
     }
-  }, [session, router, track]);
+  }, [session, track, isClient]);
 
   return {
     handleLogin,
