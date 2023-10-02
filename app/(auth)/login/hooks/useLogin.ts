@@ -1,10 +1,9 @@
-import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
-
+import { useEventTracking } from "@/services/analytics/useEventTracking";
 import { useSupabase } from "@/lib/context/SupabaseProvider";
 import { useToast } from "@/lib/hooks";
-import { useEventTracking } from "@/services/analytics/useEventTracking";
+import { useTranslation } from "react-i18next";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export const useLogin = (): {
   handleLogin: () => Promise<void>;
@@ -31,7 +30,7 @@ export const useLogin = (): {
   const searchParams = useSearchParams();
   const slackId = searchParams ? searchParams.get("teamId") : null;
 
-  const handleLogin = async () => {
+  async function handleLogin() {
     setIsPending(true);
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -44,7 +43,7 @@ export const useLogin = (): {
       } else {
         publish({ variant: "danger", text: error.message });
       }
-    } else if (data && data.session) {
+    } else if (data && data?.session) {
       console.log("Login Success:", data);
       publish({ variant: "success", text: t("loginSuccess", { ns: "login" }) });
       const accessToken = data.session.access_token;
@@ -71,11 +70,11 @@ export const useLogin = (): {
 
   // Added router to the dependency array to fix the "React Hook useEffect has a missing dependency: 'router'" linting error.
   useEffect(() => {
-    if (session?.user && isClient && router) {
+    if (session?.user && isClient) {
       track("SIGNED_IN").catch(console.error);
 
       const previousPage = sessionStorage.getItem("previous-page");
-      if (!previousPage || previousPage.trim() === "") {
+      if (!previousPage?.trim()) {
         router.push("/upload");
       } else {
         sessionStorage.removeItem("previous-page");
