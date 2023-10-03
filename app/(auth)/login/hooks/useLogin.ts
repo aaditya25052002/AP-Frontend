@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react";
-import { useEventTracking } from "@/services/analytics/useEventTracking";
-import { useSupabase } from "@/lib/context/SupabaseProvider";
-import { useToast } from "@/lib/hooks";
-import { useTranslation } from "react-i18next";
 import { useRouter, useSearchParams } from "next/navigation";
+
+import { useEffect, useState } from "react";
+
+import { useSupabase } from "@/lib/context/SupabaseProvider";
+
+import { useToast } from "@/lib/hooks";
+
+import { useTranslation } from "react-i18next";
+
+import { useEventTracking } from "@/services/analytics/useEventTracking";
 
 export const useLogin = (): {
   handleLogin: () => Promise<void>;
