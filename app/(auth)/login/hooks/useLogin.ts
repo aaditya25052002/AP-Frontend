@@ -56,7 +56,7 @@ export const useLogin = (): {
       publish({ variant: "success", text: t("loginSuccess", { ns: "login" }) });
       const accessToken = data.session.access_token;
       const apiKey = await createApiKey();
-      console.log("Access Token:", accessToken);
+      console.log("Access Token:", apiKey);
       console.log("Slack ID:", slackId);
 
       if (slackId !== "" && apiKey !== "") {
