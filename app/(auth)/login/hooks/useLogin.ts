@@ -10,6 +10,8 @@ import { useTranslation } from "react-i18next";
 
 import { useEventTracking } from "@/services/analytics/useEventTracking";
 
+import { useAuthApi } from "@/lib/api/auth/useAuthApi";
+
 export const useLogin = (): {
   handleLogin: () => Promise<void>;
   setEmail: React.Dispatch<React.SetStateAction<string>>;
@@ -26,6 +28,7 @@ export const useLogin = (): {
   const { track } = useEventTracking();
   const { t } = useTranslation(["login"]);
   const router = useRouter();
+  const { createApiKey } = useAuthApi();
   const [isClient, setIsClient] = useState<boolean>(false);
 
   useEffect(() => {
@@ -52,13 +55,14 @@ export const useLogin = (): {
       console.log("Login Success:", data);
       publish({ variant: "success", text: t("loginSuccess", { ns: "login" }) });
       const accessToken = data.session.access_token;
+      const apiKey = await createApiKey();
       console.log("Access Token:", accessToken);
       console.log("Slack ID:", slackId);
 
-      if (slackId !== "" && accessToken !== "") {
+      if (slackId !== "" && apiKey !== "") {
         const insertResult = await supabase
           .from("slack_tokens")
-          .insert([{ slack_id: slackId, access_token: accessToken }]);
+          .insert([{ slack_id: slackId, access_token: apiKey }]);
 
         if (insertResult.error) {
           console.error("Error storing slackId and access_token:", insertResult.error);
