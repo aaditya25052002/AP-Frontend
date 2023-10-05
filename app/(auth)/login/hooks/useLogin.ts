@@ -10,7 +10,30 @@ import { useTranslation } from "react-i18next";
 
 import { useEventTracking } from "@/services/analytics/useEventTracking";
 
-import { useAuthApi } from "@/lib/api/auth/useAuthApi";
+
+async function fetchApiKey(accessToken: string): Promise<string> {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api-key`, {
+      method: 'POST',
+      headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+      }
+  });
+
+  if (!response.ok) {
+      const message = await response.text();
+      throw new Error(`Failed to fetch API key: ${message}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.api_key) {
+      throw new Error("API key is missing from the response.");
+  }
+
+  return data.api_key;
+}
+
 
 export const useLogin = (): {
   handleLogin: () => Promise<void>;
@@ -28,7 +51,6 @@ export const useLogin = (): {
   const { track } = useEventTracking();
   const { t } = useTranslation(["login"]);
   const router = useRouter();
-  const { createApiKey } = useAuthApi();
   const [isClient, setIsClient] = useState<boolean>(false);
 
   useEffect(() => {
@@ -55,7 +77,7 @@ export const useLogin = (): {
       console.log("Login Success:", data);
       publish({ variant: "success", text: t("loginSuccess", { ns: "login" }) });
       const accessToken = data.session.access_token;
-      const apiKey = await createApiKey();
+      const apiKey = await fetchApiKey(accessToken);
       console.log("Access Token:", apiKey);
       console.log("Slack ID:", slackId);
 
