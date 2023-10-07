@@ -106,7 +106,7 @@ export const useLogin = (): {
 
       const previousPage = sessionStorage.getItem("previous-page");
       if (!previousPage?.trim()) {
-        router.push("/upload");
+        router.push("/chat");
       } else {
         sessionStorage.removeItem("previous-page");
         router.push(previousPage);
